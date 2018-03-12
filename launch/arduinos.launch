@@ -1,3 +1,10 @@
 <launch>
-
+	<node name="adc_zlc" pkg="rosserial_python" type="serial_node.py">
+		<param name="port" value="/dev/ttyUSB1"/>
+		<param name="baud" value="115200"/>
+	</node>	
+	<node name="adc_xy" pkg="rosserial_python" type="serial_node.py">
+		<param name="port" value="/dev/ttyUSB0"/>
+		<param name="baud" value="115200"/>
+	</node>
 </launch>
