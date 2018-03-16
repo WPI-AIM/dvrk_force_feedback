@@ -94,7 +94,7 @@ if __name__ == '__main__':
     # while not rospy.is_shutdown():
     if opt_track.get_ot_data() is not None:
         while condition:
-            answer = raw_input("Start calibration data collection? (y/n) ")
+            answer = raw_input("Start calibration data collection (cover optical markers on the mount)? (y/n) ")
             if answer == 'y':
                 for j in range(0, 300):
                     # update point number

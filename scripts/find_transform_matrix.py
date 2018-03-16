@@ -1,7 +1,6 @@
-#  Calibration of dvrk-psm-force-feedback device using optical tracking system and load cell
-#  Collects data from load cell, device, and two optical trackers and gives output txt file with force
-#  measured with device and force measured using load cell
-#  real-time plotting of force measured from load cell
+#  Finds transformation matrix for 3 optical markers attached to the mount to calibrate
+#  dvrk-psm-force-feedback device
+# gives transformation_matrix.txt and transformation_matrix.npz files as an output
 
 import rospy
 import numpy as np

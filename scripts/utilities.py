@@ -1,3 +1,4 @@
+# utilities used for calibration of dvrk-psm-force feedback device
 import rospy
 import math
 import matplotlib.pyplot as plt
@@ -34,7 +35,7 @@ def make_fig(label, x_list, y_list, i, length):
     plt.xlim((i - length, i))
     plt.plot(x_list, y_list)
 
-# create subscriber for data from Polaris Optical Tracking Data
+# create subscriber for data from Polaris(Optical Tracking Camera)
 class OpticalTracker:
 
     def __init__(self):
@@ -60,7 +61,7 @@ class OpticalTracker:
     def get_point_data(self, point_num):
         return self.msg.points[point_num]
 
-
+# create class for data listener of z-direction and load cell data from PCB with red LED
 class ZLCdataFromADC:
 
     def __init__(self, adc_number):
@@ -79,7 +80,7 @@ class ZLCdataFromADC:
     def display_number(self):
         print self.ADC_number
 
-
+# create class for data listener of x-direction and y-direction data from PCB with red LED
 class XYdataFromADC:
 
     def __init__(self, adc_number):

@@ -1,7 +1,4 @@
-#  Calibration of dvrk-psm-force-feedback device using optical tracking system and load cell
-#  Collects data from load cell, device, and two optical trackers and gives output txt file with force
-#  measured with device and force measured using load cell
-#  real-time plotting of force measured from load cell
+#  Reads noise from the PCBs for dvrk-psm-force-feedback
 
 import utilities
 import rospy
