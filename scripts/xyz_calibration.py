@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import deque
 from datetime import datetime
+from numpy.linalg import inv
 
 size = 100
 force_x_lc = 0
@@ -89,7 +90,6 @@ if __name__ == '__main__':
     answer = 0
     npzfile = np.load("transformation_matrix.npz")
     trans_matrix = npzfile['transform']
-    print trans_matrix
 
     # while not rospy.is_shutdown():
     if opt_track.get_ot_data() is not None:
@@ -109,12 +109,28 @@ if __name__ == '__main__':
                     p1 = opt_track.get_point_data(0)
                     p2 = opt_track.get_point_data(1)
 
+                    vec_p1 = np.array([p1.x, p1.y, p1.z])
+                    vec_p2 = np.array([p2.x, p2.y, p2.z])
+
+                    # change size to 1x4
+
                     # update positions using transformation matrix
+                    trans_p1 = np.dot(trans_matrix, np.append(vec_p1, 1))
+                    trans_p2 = np.dot(trans_matrix, np.append(vec_p2, 1))
+
+                    # remove last element
+                    trans_p1 = np.delete(trans_p1, 3)
+                    trans_p2 = np.delete(trans_p2, 3)
 
                     # find forces in X,Y,Z direction using load cell data
-                    force_x_lc = utilities.force_transform_x(p1, p2, force_m)
-                    force_y_lc = utilities.force_transform_y(p1, p2, force_m)
-                    force_z_lc = utilities.force_transform_z(p1, p2, force_m)
+                    unit_vector = utilities.unit_vector(p1, p2)
+
+                    trans_force = np.dot(inv(trans_matrix), np.append(unit_vector, 1))
+                    print "transformed forces", trans_force
+                    force_x_lc = force_m*trans_force[0]
+                    force_y_lc = force_m*trans_force[1]
+                    force_z_lc = force_m*trans_force[2]
+
                     force_x_m = x_adc.get_value()
                     force_y_m = y_adc.get_value()
                     force_z_m = z_adc.get_value()

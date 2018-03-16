@@ -3,30 +3,23 @@ import math
 import matplotlib.pyplot as plt
 from rosserial_arduino.msg import Adc
 from sensor_msgs.msg import PointCloud
+import numpy as np
 
 
 def distance(p1, p2):
     return math.sqrt(((p2.x-p1.x)**2)+((p2.y-p1.y)**2)+((p2.z-p1.z)**2))
 
 
-def force_transform_x(p1, p2, Fm):
-    return Fm*unit_vector_x(p1, p2)
+def unit_vector(p1, p2):
+    return np.array([unit_vector_x(p1, p2), unit_vector_y(p1, p2), unit_vector_z(p1, p2)])
 
 
 def unit_vector_x(p1, p2):
     return (p2.x - p1.x)/distance(p1, p2)
 
 
-def force_transform_y(p1, p2, Fm):
-    return Fm*unit_vector_y(p1, p2)
-
-
 def unit_vector_y(p1, p2):
     return (p2.y - p1.y)/distance(p1, p2)
-
-
-def force_transform_z(p1, p2, Fm):
-    return Fm*unit_vector_z(p1, p2)
 
 
 def unit_vector_z(p1, p2):
