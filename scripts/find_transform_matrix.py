@@ -15,7 +15,7 @@ x_vec = []
 y_vec = []
 z_vec = []
 origin_vec = []
-
+# y_vec_tran = np.array(0, 0, 0)
 
 # create subscriber for data from Polaris Optical Tracking Data
 class OpticalTracker:
@@ -28,12 +28,8 @@ class OpticalTracker:
         # filter data before publishing
         # if points number is not equal to 2 ignore the data
         if len(data.points) is 3:
-            # if point moved too far ignore the data
-            if distance(data.points[0], data.points[1]) < 5*0.0508:
-                self.msg = data
-                self.msg.header.frame_id = "world"
-            else:
-                print("Moved too far")
+            self.msg = data
+            self.msg.header.frame_id = "world"
         else:
             print("Invalid number of points")
 
@@ -45,7 +41,7 @@ class OpticalTracker:
 
 
 def create_vector(p2, p1):
-    return np.array(p1.x-p2.x, p1.y-p2.y, p1.z-p2.z)
+    return [p1.x-p2.x, p1.y-p2.y, p1.z-p2.z]
 
 
 def distance(p1, p2):
@@ -63,12 +59,10 @@ if __name__ == '__main__':
 
     answer = 0
 
-    # while not rospy.is_shutdown():
-    if opt_track.get_ot_data() is not None:
-        while condition:
-            answer = raw_input("Find transformation matrix (cover optical trackers on the spring)? (y/n) ")
-            if answer == 'y':
-                for j in range(0, 10):
+    while opt_track.get_ot_data() is None:
+            while condition:
+                answer = raw_input("Find transformation matrix (cover optical trackers on the spring)? (y/n) ")
+                if answer == 'y':
 
                     # find position of optical markers
                     p1 = opt_track.get_point_data(0)
@@ -109,24 +103,18 @@ if __name__ == '__main__':
                     # find new x,y,z
                     x_vec = create_vector(p_origin, p_z)
                     y_vec = create_vector(p_origin, p_y)
-                    z_vec = np.dot(x_vec, y_vec.transpose())
-                    origin_vec = p_origin
+                    z_vec = np.multiply(x_vec, y_vec)
+                    origin_vec = [p_origin.x, p_origin.y, p_origin.z]
 
-                    # create homogeneous matrix
-                    np.insert(x_vec, 0)
-                    np.insert(y_vec, 0)
-                    np.insert(z_vec, 0)
-                    origin_vec.append(1)
-
-            elif answer == 'n':
-                condition = False
-                # Save data in txt file
-                fname_str = 'transformation_matrix'
-                thefile = open('{0}.txt'.format(fname_str), 'a')
-                # loop through each item in the list
-                # and write it to the output file
-                for (x, y, z, o) \
-                        in zip(x_vec, y_vec, z_vec, origin_vec):
-                    thefile.write('{} {} {} {} \n'.format(str(x), str(y), str(z), str(o)))
-                thefile.write('\n \n')
-                thefile.close()
+                elif answer == 'n':
+                    condition = False
+                    # Save data in txt file
+                    fname_str = 'transformation_matrix'
+                    thefile = open('{0}.txt'.format(fname_str), 'w')
+                    # loop through each item in the list
+                    # and write it to the output file
+                    for (x, y, z, o) \
+                            in zip(x_vec, y_vec, z_vec, origin_vec):
+                        thefile.write('{} {} {} {} \n'.format(str(x), str(y), str(z), str(o)))
+                    thefile.write('0 0 0 1 \n \n')
+                    thefile.close()
