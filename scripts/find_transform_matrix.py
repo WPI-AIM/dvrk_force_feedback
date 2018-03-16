@@ -4,14 +4,17 @@
 #  real-time plotting of force measured from load cell
 
 import rospy
-from std_msgs.msg import Float32
-import matplotlib.pyplot as plt
 import numpy as np
 from sensor_msgs.msg import PointCloud
 import math
 
 answer = '0'
 condition = True
+
+x_vec = []
+y_vec = []
+z_vec = []
+origin_vec = []
 
 
 # create subscriber for data from Polaris Optical Tracking Data
@@ -41,8 +44,8 @@ class OpticalTracker:
         return self.msg.points[point_num]
 
 
-def create_vector(p1, p2):
-    return np.array(p2.x-p1.x, p2.y-p1.y, p2.z-p1.z)
+def create_vector(p2, p1):
+    return np.array(p1.x-p2.x, p1.y-p2.y, p1.z-p2.z)
 
 
 def distance(p1, p2):
@@ -85,7 +88,7 @@ if __name__ == '__main__':
                     shortest_vector = points[0]
                     second_vector = points[1]
 
-                    # figure out which point is origin
+                    # figure out which point is origin (common between shortest and second vector)
                     if shortest_vector[1] == second_vector[1]:
                         p_origin = shortest_vector[1]
                         p_z = shortest_vector[2]
@@ -103,28 +106,27 @@ if __name__ == '__main__':
                         p_z = shortest_vector[1]
                         p_y = second_vector[2]
 
-                    # find x,y,z
-                    x_vec = create_vector(p1, p2)
-                    y_vec = create_vector(p1, p2)
+                    # find new x,y,z
+                    x_vec = create_vector(p_origin, p_z)
+                    y_vec = create_vector(p_origin, p_y)
+                    z_vec = np.dot(x_vec, y_vec.transpose())
+                    origin_vec = p_origin
 
-
+                    # create homogeneous matrix
+                    np.insert(x_vec, 0)
+                    np.insert(y_vec, 0)
+                    np.insert(z_vec, 0)
+                    origin_vec.append(1)
 
             elif answer == 'n':
                 condition = False
                 # Save data in txt file
-                fname_str = 'calibration_data' + str(datetime.now())
-                print fname_str
-                plot_name = fname_str + '.png'
-                plt.savefig(plot_name)
+                fname_str = 'transformation_matrix'
                 thefile = open('{0}.txt'.format(fname_str), 'a')
-                thefile.write('F_LC_x F_x F_LC_y F_y F_LC_z F_z F_m \n')
                 # loop through each item in the list
                 # and write it to the output file
-                for (f_lc_x, f_x, f_lc_y, f_y, f_lc_z, f_z, f_m) \
-                        in zip(arr_force_x_lc, arr_force_x_m, arr_force_y_ls,
-                               arr_force_y_m, arr_force_z_lc, arr_force_z_m,
-                               arr_force_m):
-                    thefile.write('{} {} {} {} {} {} {} \n'.format(str(f_lc_x), str(f_x), str(f_lc_y),
-                                                                   str(f_y), str(f_lc_z), str(f_z), str(f_m)))
+                for (x, y, z, o) \
+                        in zip(x_vec, y_vec, z_vec, origin_vec):
+                    thefile.write('{} {} {} {} \n'.format(str(x), str(y), str(z), str(o)))
                 thefile.write('\n \n')
                 thefile.close()
