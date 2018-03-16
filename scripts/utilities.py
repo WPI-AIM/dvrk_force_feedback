@@ -75,7 +75,7 @@ class ZLCdataFromADC:
         self.data_value = 0
         self.ADC_number = adc_number
         self.ADC_DATA_ARR = []
-        rospy.Subscriber('/adc', Adc, self.callback)
+        rospy.Subscriber('/adc_zlc', Adc, self.callback)
 
     def callback(self, data):
         self.ADC_DATA_ARR = [data.adc0, data.adc1, data.adc2, data.adc3, data.adc4]
