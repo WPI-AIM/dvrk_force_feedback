@@ -87,6 +87,9 @@ if __name__ == '__main__':
 
     i = 0
     answer = 0
+    npzfile = np.load("transformation_matrix.npz")
+    trans_matrix = npzfile['transform']
+    print trans_matrix
 
     # while not rospy.is_shutdown():
     if opt_track.get_ot_data() is not None:

@@ -41,12 +41,14 @@ class OpticalTracker:
 
 
 def create_vector(p2, p1):
-    return [p1.x-p2.x, p1.y-p2.y, p1.z-p2.z]
+    return normalize(np.array([p1.x-p2.x, p1.y-p2.y, p1.z-p2.z]))
 
 
 def distance(p1, p2):
     return math.sqrt(((p2.x-p1.x)**2)+((p2.y-p1.y)**2)+((p2.z-p1.z)**2))
 
+def normalize(input):
+    return np.array(input / np.linalg.norm(input))
 
 if __name__ == '__main__':
 
@@ -58,6 +60,7 @@ if __name__ == '__main__':
     rate = rospy.Rate(50)
 
     answer = 0
+    homogeneous = None
 
     while opt_track.get_ot_data() is None:
             while condition:
@@ -81,6 +84,7 @@ if __name__ == '__main__':
                     points.sort(key=lambda tup: tup[0])
                     shortest_vector = points[0]
                     second_vector = points[1]
+                    print "Sorted list", points
 
                     # figure out which point is origin (common between shortest and second vector)
                     if shortest_vector[1] == second_vector[1]:
@@ -101,10 +105,14 @@ if __name__ == '__main__':
                         p_y = second_vector[2]
 
                     # find new x,y,z
-                    x_vec = create_vector(p_origin, p_z)
+                    z_vec = create_vector(p_origin, p_z)
                     y_vec = create_vector(p_origin, p_y)
-                    z_vec = np.multiply(x_vec, y_vec)
-                    origin_vec = [p_origin.x, p_origin.y, p_origin.z]
+                    x_vec = normalize(np.cross(y_vec, z_vec))
+                    origin_vec = np.array([p_origin.x, p_origin.y, p_origin.z]).reshape((3, 1))
+
+                    rotation = np.concatenate((x_vec.reshape((3, 1)), y_vec.reshape((3, 1)), z_vec.reshape((3, 1))), axis=1)
+                    homogeneous = np.concatenate((np.concatenate((rotation, origin_vec), axis=1),
+                                                  np.array([0, 0, 0, 1]).reshape((1, 4))), axis=0)
 
                 elif answer == 'n':
                     condition = False
@@ -118,3 +126,4 @@ if __name__ == '__main__':
                         thefile.write('{} {} {} {} \n'.format(str(x), str(y), str(z), str(o)))
                     thefile.write('0 0 0 1 \n \n')
                     thefile.close()
+                    np.savez('transformation_matrix.npz', transform=homogeneous)

@@ -41,7 +41,6 @@ def make_fig(label, x_list, y_list, i, length):
     plt.xlim((i - length, i))
     plt.plot(x_list, y_list)
 
-
 # create subscriber for data from Polaris Optical Tracking Data
 class OpticalTracker:
 
