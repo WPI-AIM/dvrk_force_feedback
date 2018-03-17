@@ -29,7 +29,7 @@ class WheatstoneBridge:
 
     def callback(self, data):
         self.ADC_DATA_ARR = [data.adc0, data.adc1, data.adc2, data.adc3, data.adc4]
-        if (self.index < 10):
+        if self.index < 10:
             self.data_arr.append(self.ADC_DATA_ARR[self.ADC_number])
             self.index = self.index + 1
         else:
@@ -39,7 +39,7 @@ class WheatstoneBridge:
     def get_average(self):
         return np.mean(self.data_arr)
 
-    def displayNumber(self):
+    def display_number(self):
         print self.ADC_number
 
 
@@ -61,18 +61,12 @@ def listener():
         answer = raw_input("Add data point? (y/n) ")
         # check if answer is yes
         if (answer == 'y'):
-            # If answer is yes - "y"
-            # Ask user to type weight value "Type weight [g]: "
             weight = input("Type weight [g]: ")
             # Calculate force from the weight value
-            # by multiplying variable weight by a constant 9.8 and dividing by a constant 1000
             force = (weight * 9.8) / 1000
-            # Append value "force" to "force_array"
             force_arr.append(force)
             # Measure average value of 100 readings from the first Wheatstone Bridge WB1
             lc_ave_arr.append(lc_force.get_average())
-            answer = 0
-        # If answer is no - "n"
         elif (answer == 'n'):
             # Make a plot Voltage Readings vs Force
             # Find maximum value of WB readings
@@ -105,7 +99,7 @@ def listener():
                 thefile.write('{} {} \n'.format(str(f), str(r1)))
             thefile.write('\n \n')
             thefile.close()
-            answer = 0
+
         else:
             print ("Try again!")
         # simply keeps python from exiting until this node is stopped

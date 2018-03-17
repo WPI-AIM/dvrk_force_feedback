@@ -14,7 +14,7 @@ x_vec = []
 y_vec = []
 z_vec = []
 origin_vec = []
-# y_vec_tran = np.array(0, 0, 0)
+
 
 # create subscriber for data from Polaris Optical Tracking Data
 class OpticalTracker:
@@ -46,8 +46,10 @@ def create_vector(p2, p1):
 def distance(p1, p2):
     return math.sqrt(((p2.x-p1.x)**2)+((p2.y-p1.y)**2)+((p2.z-p1.z)**2))
 
+
 def normalize(input):
     return np.array(input / np.linalg.norm(input))
+
 
 if __name__ == '__main__':
 
@@ -66,7 +68,7 @@ if __name__ == '__main__':
                 answer = raw_input("Find transformation matrix (cover optical trackers on the spring)? (y/n) ")
                 if answer == 'y':
 
-                    # find position of optical markers
+                    # find positions of optical markers
                     p1 = opt_track.get_point_data(0)
                     p2 = opt_track.get_point_data(1)
                     p3 = opt_track.get_point_data(2)
@@ -79,12 +81,12 @@ if __name__ == '__main__':
                     # create lists of three vectors
                     points = [(dis_1, p1, p2), (dis_2, p2, p3), (dis_3, p1, p3)]
 
-                    # smallest distance is p1-p2, second small is p2-p3, largest is p3-p1
+                    # find smallest distance is p1-p2, second small is p2-p3, largest is p3-p1
                     points.sort(key=lambda tup: tup[0])
                     shortest_vector = points[0]
                     second_vector = points[1]
 
-                    # figure out which point is origin (common between shortest and second vector)
+                    # figure out which point is which: origin (common between shortest and second vector), etc
                     if shortest_vector[1] == second_vector[1]:
                         p_origin = shortest_vector[1]
                         p_z = shortest_vector[2]
@@ -102,26 +104,19 @@ if __name__ == '__main__':
                         p_z = shortest_vector[1]
                         p_y = second_vector[2]
 
-                    # find new x,y,z
+                    # find new x,y,z vectors
                     z_vec = create_vector(p_origin, p_z)
                     y_vec = create_vector(p_origin, p_y)
                     x_vec = normalize(np.cross(y_vec, z_vec))
                     origin_vec = np.array([p_origin.x, p_origin.y, p_origin.z]).reshape((3, 1))
 
+                    # create rotation matrix by merging x,y,z
                     rotation = np.concatenate((x_vec.reshape((3, 1)), y_vec.reshape((3, 1)), z_vec.reshape((3, 1))), axis=1)
+                    # create homogeneous matrix by merging it with origin point coordinates
                     homogeneous = np.concatenate((np.concatenate((rotation, origin_vec), axis=1),
                                                   np.array([0, 0, 0, 1]).reshape((1, 4))), axis=0)
 
                 elif answer == 'n':
                     condition = False
-                    # Save data in txt file
-                    fname_str = 'transformation_matrix'
-                    thefile = open('{0}.txt'.format(fname_str), 'w')
-                    # loop through each item in the list
-                    # and write it to the output file
-                    for (x, y, z, o) \
-                            in zip(x_vec, y_vec, z_vec, origin_vec):
-                        thefile.write('{} {} {} {} \n'.format(str(x), str(y), str(z), str(o)))
-                    thefile.write('0 0 0 1 \n \n')
-                    thefile.close()
+                    # Save data in npz file
                     np.savez('transformation_matrix.npz', transform=homogeneous)

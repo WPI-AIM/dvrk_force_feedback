@@ -5,7 +5,6 @@
 
 import utilities
 import rospy
-from std_msgs.msg import Float32
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import deque
@@ -28,25 +27,15 @@ arr_force_x_m = []
 arr_force_y_m = []
 arr_force_z_m = []
 arr_force_m = []
-arr_point1_crd = []
-arr_point2_crd = []
 
+# create deques for real-time plotting
 deq_x_data = deque(maxlen=size)
+deq_force_m = deque(maxlen=size)
 
 force_m = 0          # force magnitude measured from load cell
-deq_force_m = deque(maxlen=size)
+
 answer = '0'
 condition = True
-
-
-def publish_data():
-    pub_fx_lc.publish(Float32(force_x_lc))
-    pub_fy_lc.publish(Float32(force_y_lc))
-    pub_fz_lc.publish(Float32(force_z_lc))
-    pub_force_m.publish(Float32(force_m))
-    pub_fx.publish(Float32(force_x_m))
-    pub_fy.publish(Float32(force_y_m))
-    pub_fz.publish(Float32(force_z_m))
 
 
 def add_data_to_arr():
@@ -57,8 +46,6 @@ def add_data_to_arr():
     arr_force_y_m.append(force_y_m)
     arr_force_z_m.append(force_z_m)
     arr_force_m.append(force_m)
-    arr_point1_crd.append(p1)
-    arr_point2_crd.append(p2)
 
 
 if __name__ == '__main__':
@@ -77,21 +64,12 @@ if __name__ == '__main__':
     opt_track = utilities.OpticalTracker()
     rate = rospy.Rate(50)
 
-    # create publishers
-    pub_fx_lc = rospy.Publisher('/adc_listener/force_x_lc', Float32, queue_size=1)
-    pub_fy_lc = rospy.Publisher('/adc_listener/force_y_lc', Float32, queue_size=1)
-    pub_fz_lc = rospy.Publisher('/adc_listener/force_z_lc', Float32, queue_size=1)
-    pub_force_m = rospy.Publisher('/adc_listener/force_m', Float32, queue_size=1)
-    pub_fx = rospy.Publisher('/adc_listener/force_x', Float32, queue_size=1)
-    pub_fy = rospy.Publisher('/adc_listener/force_y', Float32, queue_size=1)
-    pub_fz = rospy.Publisher('/adc_listener/force_z', Float32, queue_size=1)
-
     i = 0
     answer = 0
+    # load transformation matrix from npz file
     npzfile = np.load("transformation_matrix.npz")
     trans_matrix = npzfile['transform']
 
-    # while not rospy.is_shutdown():
     if opt_track.get_ot_data() is not None:
         while condition:
             answer = raw_input("Start calibration data collection (cover optical markers on the mount)? (y/n) ")
@@ -109,41 +87,28 @@ if __name__ == '__main__':
                     p1 = opt_track.get_point_data(0)
                     p2 = opt_track.get_point_data(1)
 
-                    vec_p1 = np.array([p1.x, p1.y, p1.z])
-                    vec_p2 = np.array([p2.x, p2.y, p2.z])
-
-                    # change size to 1x4
-
-                    # update positions using transformation matrix
-                    trans_p1 = np.dot(trans_matrix, np.append(vec_p1, 1))
-                    trans_p2 = np.dot(trans_matrix, np.append(vec_p2, 1))
-
-                    # remove last element
-                    trans_p1 = np.delete(trans_p1, 3)
-                    trans_p2 = np.delete(trans_p2, 3)
-
                     # find forces in X,Y,Z direction using load cell data
                     unit_vector = utilities.unit_vector(p1, p2)
 
-                    # find force in new coordinates by multiplying to transformation matrix
-                    trans_force = np.dot(inv(trans_matrix), np.append(unit_vector, 1))
+                    # find unit vector in new coordinates
+                    trans_unit_vec = np.dot(inv(trans_matrix), np.append(unit_vector, 1))
 
-                    force_x_lc = force_m*trans_force[0]
-                    force_y_lc = force_m*trans_force[1]
-                    force_z_lc = force_m*trans_force[2]
+                    # find forces in each direction
+                    force_x_lc = force_m*trans_unit_vec[0]
+                    force_y_lc = force_m*trans_unit_vec[1]
+                    force_z_lc = force_m*trans_unit_vec[2]
 
+                    # measure force from force-feedback device
                     force_x_m = x_adc.get_value()
                     force_y_m = y_adc.get_value()
                     force_z_m = z_adc.get_value()
 
-                    publish_data()
                     add_data_to_arr()
 
                     # real-time plotting of Force magnitude data
                     if i > 100:
                         utilities.make_fig('Force Magnitude [mN]', deq_x_data, deq_force_m, i, 100)
                         plt.pause(0.001)
-                    # rate.sleep()
 
             elif answer == 'n':
                 condition = False
@@ -152,7 +117,7 @@ if __name__ == '__main__':
                 print fname_str
                 plot_name = fname_str + '.png'
                 plt.savefig(plot_name)
-                thefile = open('{0}.txt'.format(fname_str), 'a')
+                thefile = open('/home/parallels/catkin_ws/src/force_feedback_anna/scripts/results/{0}.txt'.format(fname_str), 'a')
                 thefile.write('F_LC_x F_x F_LC_y F_y F_LC_z F_z F_m \n')
                 # loop through each item in the list
                 # and write it to the output file

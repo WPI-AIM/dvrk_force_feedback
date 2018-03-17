@@ -12,7 +12,6 @@ arr_data_1 = []
 arr_data_2 = []
 
 
-
 if __name__ == '__main__':
     # create node
     rospy.init_node('adc_listener', anonymous=True)
