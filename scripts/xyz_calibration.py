@@ -125,8 +125,9 @@ if __name__ == '__main__':
                     # find forces in X,Y,Z direction using load cell data
                     unit_vector = utilities.unit_vector(p1, p2)
 
+                    # find force in new coordinates by multiplying to transformation matrix
                     trans_force = np.dot(inv(trans_matrix), np.append(unit_vector, 1))
-                    print "transformed forces", trans_force
+
                     force_x_lc = force_m*trans_force[0]
                     force_y_lc = force_m*trans_force[1]
                     force_z_lc = force_m*trans_force[2]
@@ -143,6 +144,7 @@ if __name__ == '__main__':
                         utilities.make_fig('Force Magnitude [mN]', deq_x_data, deq_force_m, i, 100)
                         plt.pause(0.001)
                     # rate.sleep()
+
             elif answer == 'n':
                 condition = False
                 # Save data in txt file

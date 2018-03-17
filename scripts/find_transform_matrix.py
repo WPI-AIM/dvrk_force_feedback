@@ -83,7 +83,6 @@ if __name__ == '__main__':
                     points.sort(key=lambda tup: tup[0])
                     shortest_vector = points[0]
                     second_vector = points[1]
-                    print "Sorted list", points
 
                     # figure out which point is origin (common between shortest and second vector)
                     if shortest_vector[1] == second_vector[1]:
