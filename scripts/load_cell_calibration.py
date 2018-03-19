@@ -60,14 +60,21 @@ def listener():
         # Ask user "Add data point? (y/n)"
         answer = raw_input("Add data point? (y/n) ")
         # check if answer is yes
-        if (answer == 'y'):
+        if answer == 'y':
             weight = input("Type weight [g]: ")
             # Calculate force from the weight value
             force = (weight * 9.8) / 1000
             force_arr.append(force)
             # Measure average value of 100 readings from the first Wheatstone Bridge WB1
             lc_ave_arr.append(lc_force.get_average())
-        elif (answer == 'n'):
+
+        elif answer == 'n':
+
+            # Find parameters for linear equation for data fitting
+            [a, b] = np.polyfit(lc_ave_arr, force_arr, 1)
+            print "Equation parameter a=", a, ", b=", b
+            np.savez('load_cell_linear_equation_parameters.npz', lc_equation_parameters=[a, b])
+
             # Make a plot Voltage Readings vs Force
             # Find maximum value of WB readings
             lc_ave_plot = [x - min(lc_ave_arr) for x in lc_ave_arr]

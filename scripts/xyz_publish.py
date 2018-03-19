@@ -1,6 +1,7 @@
 import utilities
 from std_msgs.msg import Float32
 import rospy
+import numpy as np
 
 force_x = 0
 force_y = 0
@@ -21,6 +22,10 @@ if __name__ == '__main__':
     y_adc = utilities.XYdataFromADC(1)
     z_adc = utilities.ZLCdataFromADC(1)
 
+    # load linear equations parameters
+    npz_xyz_data = np.load("xyz_linear_equation_parameters.npz")
+    xyz_lin_eq_param = npz_xyz_data['xyz_equation_parameters']
+
     # create publishers
     pub_fx = rospy.Publisher('/force_feedback/force_x', Float32, queue_size=1)
     pub_fy = rospy.Publisher('/force_feedback/force_y', Float32, queue_size=1)
@@ -34,9 +39,9 @@ if __name__ == '__main__':
         adc_z = z_adc.get_value()
 
         # convert data from ADC-values to force [mN]
-        force_x = convert_adc_to_force(adc_x, 0.33, -30000)
-        force_y = convert_adc_to_force(adc_y, 0.33, -30000)
-        force_z = convert_adc_to_force(adc_z, 0.33, -30000)
+        force_x = convert_adc_to_force(adc_x, xyz_lin_eq_param[0][0], xyz_lin_eq_param[0][1])
+        force_y = convert_adc_to_force(adc_y, xyz_lin_eq_param[1][0], xyz_lin_eq_param[1][1])
+        force_z = convert_adc_to_force(adc_z, xyz_lin_eq_param[2][0], xyz_lin_eq_param[2][1])
 
         # publish data
         pub_fx.publish(Float32(force_x))

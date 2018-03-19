@@ -21,7 +21,7 @@ force_z_m = 0
 
 # create arrays to save data
 arr_force_x_lc = []
-arr_force_y_ls = []
+arr_force_y_lc = []
 arr_force_z_lc = []
 arr_force_x_m = []
 arr_force_y_m = []
@@ -40,7 +40,7 @@ condition = True
 
 def add_data_to_arr():
     arr_force_x_lc.append(force_x_lc)
-    arr_force_y_ls.append(force_y_lc)
+    arr_force_y_lc.append(force_y_lc)
     arr_force_z_lc.append(force_z_lc)
     arr_force_x_m.append(force_x_m)
     arr_force_y_m.append(force_y_m)
@@ -70,7 +70,10 @@ if __name__ == '__main__':
     npzfile = np.load("transformation_matrix.npz")
     trans_matrix = npzfile['transform']
 
-    if opt_track.get_ot_data() is not None:
+    npz_lc_data = np.load("load_cell_linear_equation_parameters.npz")
+    lc_lin_eq_param = npz_lc_data['lc_equation_parameters']
+
+    while opt_track.get_ot_data() is None:
         while condition:
             answer = raw_input("Start calibration data collection (cover optical markers on the mount)? (y/n) ")
             if answer == 'y':
@@ -80,7 +83,7 @@ if __name__ == '__main__':
                     deq_x_data.append(i)
 
                     # use calibration equation to transform ADC values to Forces
-                    force_m = (lc.get_value() - 31720)/3.017
+                    force_m = lc_lin_eq_param[0]*lc.get_value() + lc_lin_eq_param[1]
                     deq_force_m.append(force_m)
 
                     # find position of two optical trackers
@@ -111,6 +114,16 @@ if __name__ == '__main__':
                         plt.pause(0.001)
 
             elif answer == 'n':
+                # Find parameters for linear equation for data fitting
+                [x_a, x_b] = np.polyfit(arr_force_x_m, arr_force_x_lc, 1)
+                [y_a, y_b] = np.polyfit(arr_force_y_m, arr_force_y_lc, 1)
+                [z_a, z_b] = np.polyfit(arr_force_z_m, arr_force_z_lc, 1)
+                print "Equation parameter in x dir a=", x_a, ", b=", x_b
+                print "Equation parameter in y dir a=", y_a, ", b=", y_b
+                print "Equation parameter in z dir a=", z_a, ", b=", z_b
+                parameters = [[x_a, x_b], [y_a, y_b], [z_a, z_b]]
+                np.savez('xyz_linear_equation_parameters.npz', xyz_equation_parameters=parameters)
+
                 condition = False
                 # Save data in txt file
                 fname_str = 'calibration_data' + str(datetime.now())
@@ -122,7 +135,7 @@ if __name__ == '__main__':
                 # loop through each item in the list
                 # and write it to the output file
                 for (f_lc_x, f_x, f_lc_y, f_y, f_lc_z, f_z, f_m) \
-                        in zip(arr_force_x_lc, arr_force_x_m, arr_force_y_ls,
+                        in zip(arr_force_x_lc, arr_force_x_m, arr_force_y_lc,
                                arr_force_y_m, arr_force_z_lc, arr_force_z_m,
                                arr_force_m):
                     thefile.write('{} {} {} {} {} {} {} \n'.format(str(f_lc_x), str(f_x), str(f_lc_y),
