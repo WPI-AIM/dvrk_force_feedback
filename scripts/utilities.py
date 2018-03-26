@@ -1,4 +1,5 @@
 # utilities used for calibration of dvrk-psm-force feedback device
+import dvrk
 import rospy
 import math
 import matplotlib.pyplot as plt
@@ -11,8 +12,9 @@ def distance(p1, p2):
     return math.sqrt(((p2.x-p1.x)**2)+((p2.y-p1.y)**2)+((p2.z-p1.z)**2))
 
 
-def unit_vector(p1, p2):
-    return np.array([unit_vector_x(p1, p2), unit_vector_y(p1, p2), unit_vector_z(p1, p2)])
+def find_unit_vector(p1, p2):
+    return (p2 - p1)/np.linalg.norm(p2 - p1)
+    # return np.array([unit_vector_x(p1, p2), unit_vector_y(p1, p2), unit_vector_z(p1, p2)])
 
 
 def unit_vector_x(p1, p2):
@@ -27,7 +29,8 @@ def unit_vector_z(p1, p2):
     return (p2.z - p1.z)/distance(p1, p2)
 
 
-def make_fig(label, x_list, y_list, i, length):
+def make_fig(label, x_list, y_list, i, length, positioner):
+    plt.subplot(positioner)
     plt.xlabel('sample')
     plt.ylabel(label)
     plt.grid(True)
@@ -48,12 +51,14 @@ class OpticalTracker:
         # if points number is not equal to 2 ignore the data
         if len(data.points) is 2:
             # if point moved too far ignore the data
-            if distance(data.points[0], data.points[1]) < 5*0.0508:
-                self.msg = data
-                self.msg.header.frame_id = "world"
-            else:
-                print("Moved too far")
+            # if distance(data.points[0], data.points[1]) < 5*0.0508:
+            self.msg = data
+            self.msg.header.frame_id = "world"
+            # else:
+            #     self.msg = None
+            #     print("Moved too far")
         else:
+            self.msg = None
             print("Invalid number of points")
 
     def get_ot_data(self):

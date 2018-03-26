@@ -13,13 +13,14 @@ def convert_adc_to_force(adc_value, a, b):
 
 
 if __name__ == '__main__':
+    rate = rospy.Rate(500)
 
     # create node
     rospy.init_node('force_feedback', anonymous=True)
 
     # instantiating classes
-    x_adc = utilities.XYdataFromADC(0)
-    y_adc = utilities.XYdataFromADC(1)
+    x_adc = utilities.XYdataFromADC(1)
+    y_adc = utilities.XYdataFromADC(0)
     z_adc = utilities.ZLCdataFromADC(1)
 
     # load linear equations parameters
@@ -47,3 +48,5 @@ if __name__ == '__main__':
         pub_fx.publish(Float32(force_x))
         pub_fy.publish(Float32(force_y))
         pub_fz.publish(Float32(force_z))
+
+        rate.sleep()

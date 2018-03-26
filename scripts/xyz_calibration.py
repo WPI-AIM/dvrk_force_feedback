@@ -3,6 +3,7 @@
 #  measured with device and force measured using load cell
 #  real-time plotting of force measured from load cell
 
+import dvrk
 import utilities
 import rospy
 import matplotlib.pyplot as plt
@@ -31,6 +32,9 @@ arr_force_m = []
 # create deques for real-time plotting
 deq_x_data = deque(maxlen=size)
 deq_force_m = deque(maxlen=size)
+deq_force_x = deque(maxlen=size)
+deq_force_y = deque(maxlen=size)
+deq_force_z = deque(maxlen=size)
 
 force_m = 0          # force magnitude measured from load cell
 
@@ -56,62 +60,108 @@ if __name__ == '__main__':
     # create node
     rospy.init_node('adc_listener', anonymous=True)
 
+    # Create a Python proxy for PSM1, name must match ros namespace
+    p = dvrk.psm('PSM2')
+    #p.home()
+    #p.move_joint_some(np.array([0.23520355, -0.70646788,  0.1164548,  1.09101678]), np.array([0, 1, 2, 3]))
+    # 0.1-0.24 3rd number coordinate of joint states (insertion joint)
     # create classes
     lc = utilities.ZLCdataFromADC(0)
     z_adc = utilities.ZLCdataFromADC(1)
-    x_adc = utilities.XYdataFromADC(0)
-    y_adc = utilities.XYdataFromADC(1)
+    x_adc = utilities.XYdataFromADC(1)
+    y_adc = utilities.XYdataFromADC(0)
     opt_track = utilities.OpticalTracker()
-    rate = rospy.Rate(50)
+    rate = rospy.Rate(100)
 
     i = 0
     answer = 0
     # load transformation matrix from npz file
     npzfile = np.load("transformation_matrix.npz")
-    trans_matrix = npzfile['transform']
+    transform_camera_to_robot = npzfile['transform']
+    print 'trans matrix', transform_camera_to_robot
 
     npz_lc_data = np.load("load_cell_linear_equation_parameters.npz")
     lc_lin_eq_param = npz_lc_data['lc_equation_parameters']
+    while condition:
+        while opt_track.get_ot_data() is not None and condition is True:
 
-    while opt_track.get_ot_data() is None:
-        while condition:
+            p1 = opt_track.get_point_data(0)
+            p2 = opt_track.get_point_data(1)
+            p1_array = np.array([p1.x, p1.y, p1.z])
+            p2_array = np.array([p2.x, p2.y, p2.z])
+            p1_robot = np.dot(inv(transform_camera_to_robot), np.append(p1_array, 1))
+            p2_robot = np.dot(inv(transform_camera_to_robot), np.append(p2_array, 1))
+
+            if p1_robot[2] > p2_robot[2]:
+                p_stat_def = p1_robot
+            else:
+                p_stat_def = p2_robot
+
             answer = raw_input("Start calibration data collection (cover optical markers on the mount)? (y/n) ")
             if answer == 'y':
-                for j in range(0, 300):
-                    # update point number
-                    i = i + 1
-                    deq_x_data.append(i)
+                for j in range(0, 500):
 
-                    # use calibration equation to transform ADC values to Forces
-                    force_m = lc_lin_eq_param[0]*lc.get_value() + lc_lin_eq_param[1]
-                    deq_force_m.append(force_m)
+                    if opt_track.get_ot_data() is not None:
 
-                    # find position of two optical trackers
-                    p1 = opt_track.get_point_data(0)
-                    p2 = opt_track.get_point_data(1)
+                        # find position of two optical trackers
+                        p1 = opt_track.get_point_data(0)
+                        p2 = opt_track.get_point_data(1)
+                        p1_array = np.array([p1.x, p1.y, p1.z])
+                        p2_array = np.array([p2.x, p2.y, p2.z])
+                        p1_robot = np.dot(inv(transform_camera_to_robot), np.append(p1_array, 1))
+                        p2_robot = np.dot(inv(transform_camera_to_robot), np.append(p2_array, 1))
 
-                    # find forces in X,Y,Z direction using load cell data
-                    unit_vector = utilities.unit_vector(p1, p2)
+                        if np.linalg.norm(p_stat_def[0:3]-p1_robot[0:3]) < np.linalg.norm(p_stat_def[0:3]-p2_robot[0:3]):
+                            p_stat = p1_robot
+                            p_mob = p2_robot
+                        else:
+                            p_stat = p2_robot
+                            p_mob = p1_robot
 
-                    # find unit vector in new coordinates
-                    trans_unit_vec = np.dot(inv(trans_matrix), np.append(unit_vector, 1))
+                        # use calibration equation to transform ADC values to Forces
+                        force_m = lc_lin_eq_param[0] * lc.get_value() + lc_lin_eq_param[1]
+                        deq_force_m.append(force_m)
 
-                    # find forces in each direction
-                    force_x_lc = force_m*trans_unit_vec[0]
-                    force_y_lc = force_m*trans_unit_vec[1]
-                    force_z_lc = force_m*trans_unit_vec[2]
+                        # update point number
+                        i = i + 1
+                        deq_x_data.append(i)
 
-                    # measure force from force-feedback device
-                    force_x_m = x_adc.get_value()
-                    force_y_m = y_adc.get_value()
-                    force_z_m = z_adc.get_value()
+                        print "p1", p1_array, "p2", p2_array
+                        print "p1_r", p_stat, "p2_r", p_mob
 
-                    add_data_to_arr()
+                        # find forces in X,Y,Z direction using load cell data
+                        unit_vector = utilities.find_unit_vector(p_stat, p_mob)
+                        print "unit vector", unit_vector
 
-                    # real-time plotting of Force magnitude data
-                    if i > 100:
-                        utilities.make_fig('Force Magnitude [mN]', deq_x_data, deq_force_m, i, 100)
-                        plt.pause(0.001)
+                        # find unit vector in new coordinates
+                        #trans_unit_vec = np.dot(inv(transform_camera_to_robot), np.append(unit_vector, 1))
+
+                        # find forces in each direction
+                        force_x_lc = force_m*unit_vector[0]
+                        force_y_lc = force_m*unit_vector[1]
+                        force_z_lc = force_m*unit_vector[2]
+
+                        deq_force_x.append(force_x_lc)
+                        deq_force_y.append(force_y_lc)
+                        deq_force_z.append(force_z_lc)
+
+                        # measure force from force-feedback device
+                        force_x_m = x_adc.get_value()
+                        force_y_m = y_adc.get_value()
+                        force_z_m = p.get_current_joint_effort()[2]
+                        #force_z_m = z_adc.get_value()
+
+                        add_data_to_arr()
+
+                        # real-time plotting of Force magnitude data
+                        if i > 100:
+                            utilities.make_fig('Force Magnitude [N]', deq_x_data, deq_force_m, i, 100, 221)
+                            utilities.make_fig('Force X [N]', deq_x_data, deq_force_x, i, 100, 222)
+                            utilities.make_fig('Force Y [N]', deq_x_data, deq_force_y, i, 100, 223)
+                            utilities.make_fig('Force Z [N]', deq_x_data, deq_force_z, i, 100, 224)
+                            plt.pause(0.005)
+                        rate.sleep()
+
 
             elif answer == 'n':
                 # Find parameters for linear equation for data fitting
