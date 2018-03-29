@@ -1,3 +1,4 @@
+import dvrk
 import utilities
 from std_msgs.msg import Float32
 import rospy
@@ -9,10 +10,13 @@ force_z = 0
 
 
 def convert_adc_to_force(adc_value, a, b):
-    return a*adc_value + b
+    return (adc_value - b)/a
 
 
 if __name__ == '__main__':
+    # Create a Python proxy for PSM2, name must match ros namespace
+    p = dvrk.psm('PSM2')
+
     rate = rospy.Rate(500)
 
     # create node
@@ -22,10 +26,11 @@ if __name__ == '__main__':
     x_adc = utilities.XYdataFromADC(1)
     y_adc = utilities.XYdataFromADC(0)
     z_adc = utilities.ZLCdataFromADC(1)
+    z_joint = p.get_current_joint_effort()[2]
 
-    # load linear equations parameters
-    npz_xyz_data = np.load("xyz_linear_equation_parameters.npz")
-    xyz_lin_eq_param = npz_xyz_data['xyz_equation_parameters']
+    # # load linear equations parameters
+    # npz_xyz_data = np.load("xyz_linear_equation_parameters.npz")
+    # xyz_lin_eq_param = npz_xyz_data['xyz_equation_parameters']
 
     # create publishers
     pub_fx = rospy.Publisher('/force_feedback/force_x', Float32, queue_size=1)
@@ -34,15 +39,24 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
 
+        position = p.get_current_joint_position()[2]
+        # following numbers found from calibration
+        a_x = -5924 * position + 1981
+        b_x = 31360
+        a_y = -12373 * position + 3520
+        b_y = 33220
+        a_z = 618
+        b_z = 31172
+
         # measure force from force-feedback device
         adc_x = x_adc.get_value()
         adc_y = y_adc.get_value()
         adc_z = z_adc.get_value()
 
         # convert data from ADC-values to force [mN]
-        force_x = convert_adc_to_force(adc_x, xyz_lin_eq_param[0][0], xyz_lin_eq_param[0][1])
-        force_y = convert_adc_to_force(adc_y, xyz_lin_eq_param[1][0], xyz_lin_eq_param[1][1])
-        force_z = convert_adc_to_force(adc_z, xyz_lin_eq_param[2][0], xyz_lin_eq_param[2][1])
+        force_x = convert_adc_to_force(adc_x, a_x, b_x)
+        force_y = convert_adc_to_force(adc_y, a_y, b_y)
+        force_z = convert_adc_to_force(adc_z, a_z, b_z)
 
         # publish data
         pub_fx.publish(Float32(force_x))

@@ -14,19 +14,6 @@ def distance(p1, p2):
 
 def find_unit_vector(p1, p2):
     return (p2 - p1)/np.linalg.norm(p2 - p1)
-    # return np.array([unit_vector_x(p1, p2), unit_vector_y(p1, p2), unit_vector_z(p1, p2)])
-
-
-def unit_vector_x(p1, p2):
-    return (p2.x - p1.x)/distance(p1, p2)
-
-
-def unit_vector_y(p1, p2):
-    return (p2.y - p1.y)/distance(p1, p2)
-
-
-def unit_vector_z(p1, p2):
-    return (p2.z - p1.z)/distance(p1, p2)
 
 
 def make_fig(label, x_list, y_list, i, length, positioner):
