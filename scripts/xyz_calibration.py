@@ -37,6 +37,9 @@ deq_force_m = deque(maxlen=size)
 deq_force_x = deque(maxlen=size)
 deq_force_y = deque(maxlen=size)
 deq_force_z = deque(maxlen=size)
+deq_adc_x = deque(maxlen=size)
+deq_adc_y = deque(maxlen=size)
+deq_adc_z = deque(maxlen=size)
 
 force_m = 0          # force magnitude measured from load cell
 
@@ -53,6 +56,10 @@ def add_data_to_arr():
     arr_force_z_m.append(force_z_m)
     arr_force_m.append(force_m)
     arr_force_z_mc.append(force_z_mc)
+
+
+def convert_adc_to_force(adc_value, a, b):
+    return (adc_value - b)/a
 
 
 if __name__ == '__main__':
@@ -83,6 +90,18 @@ if __name__ == '__main__':
 
     npz_lc_data = np.load("load_cell_linear_equation_parameters.npz")
     lc_lin_eq_param = npz_lc_data['lc_equation_parameters']
+
+    # get reading when force is 0
+    for i in range(0, 300):
+        deq_adc_x.append(x_adc.get_value())
+        deq_adc_y.append(y_adc.get_value())
+        deq_adc_z.append(z_adc.get_value())
+
+    # find average b parameter to delete offset error
+    b_x = np.mean(deq_adc_x)
+    b_y = np.mean(deq_adc_y)
+    b_z = np.mean(deq_adc_z)
+
     while condition:
         while opt_track.get_ot_data() is not None and condition is True:
             # get position of optical markers in camera frame
@@ -141,9 +160,9 @@ if __name__ == '__main__':
                         deq_force_z.append(force_z_lc)
 
                         # measure force from force-feedback device
-                        force_x_m = x_adc.get_value()
-                        force_y_m = y_adc.get_value()
-                        force_z_m = z_adc.get_value()
+                        force_x_m = x_adc.get_value() - b_x
+                        force_y_m = y_adc.get_value() - b_y
+                        force_z_m = z_adc.get_value() - b_z
                         force_z_mc = p.get_current_joint_effort()[2]
 
                         add_data_to_arr()

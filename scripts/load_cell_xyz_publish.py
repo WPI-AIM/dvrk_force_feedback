@@ -6,6 +6,7 @@ import numpy as np
 from numpy.linalg import inv
 from std_msgs.msg import Float32
 
+
 force_x = 0     # x-component of the force
 force_y = 0     # y-component of the force
 force_z = 0     # z-component of the force

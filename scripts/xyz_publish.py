@@ -3,10 +3,16 @@ import utilities
 from std_msgs.msg import Float32
 import rospy
 import numpy as np
+from collections import deque
 
 force_x = 0
 force_y = 0
 force_z = 0
+
+size = 300
+deq_adc_x = deque(maxlen=size)
+deq_adc_y = deque(maxlen=size)
+deq_adc_z = deque(maxlen=size)
 
 
 def convert_adc_to_force(adc_value, a, b):
@@ -37,16 +43,25 @@ if __name__ == '__main__':
     pub_fy = rospy.Publisher('/force_feedback/force_y', Float32, queue_size=1)
     pub_fz = rospy.Publisher('/force_feedback/force_z', Float32, queue_size=1)
 
-    while not rospy.is_shutdown():
+    # get reading when force is 0
+    for i in range(0, 300):
+        deq_adc_x.append(x_adc.get_value())
+        deq_adc_y.append(y_adc.get_value())
+        deq_adc_z.append(z_adc.get_value())
 
+    # find average b parameter to delete offset error
+    b_x = np.mean(deq_adc_x)
+    b_y = np.mean(deq_adc_y)
+    b_z = np.mean(deq_adc_z)
+
+    while not rospy.is_shutdown():
+        # read joint position of the tool
         position = p.get_current_joint_position()[2]
+
         # following numbers found from calibration
         a_x = -5924 * position + 1981
-        b_x = 31360
         a_y = -12373 * position + 3520
-        b_y = 33220
         a_z = 618
-        b_z = 31172
 
         # measure force from force-feedback device
         adc_x = x_adc.get_value()
