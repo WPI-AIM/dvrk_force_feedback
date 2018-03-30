@@ -191,7 +191,7 @@ if __name__ == '__main__':
                 plot_name = fname_str + '.png'
                 plt.savefig(plot_name)
                 thefile = open('/home/parallels/catkin_ws/src/force_feedback_anna/scripts/results/{0}.txt'.format(fname_str), 'a')
-                thefile.write('Force_x ADC_x Force_y ADC_y Force_z ADC_z Force_magnitude Force_z_motor_current \n')
+                # thefile.write('Force_x ADC_x Force_y ADC_y Force_z ADC_z Force_magnitude Force_z_motor_current \n')
                 # loop through each item in the list and write it to the output file
                 for (f_lc_x, f_x, f_lc_y, f_y, f_lc_z, f_z, f_m, f_z_mc) \
                         in zip(arr_force_x_lc, arr_force_x_m, arr_force_y_lc,
